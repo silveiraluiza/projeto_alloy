@@ -8,10 +8,16 @@ sig contaCorrente extends Conta {}
 sig Poupanca extends Conta {}
 sig contaVip in Conta {}
 
-fact {
-all b1, b2 : Banco | no (b1.contas & b2.contas)
+assert testeBancoSemContas{
+all b:Banco | #(b.contas) > 0
 }
+
+fact {
+all c:Conta | #(c.~contas) > 0
+}
+
+check testeBancoSemContas
 
 pred show[]{
 }
-run show for 3
+run show 
