@@ -28,7 +28,10 @@ taxi: one Taxi
 fact{
 all t: Taxi | #(t.~taxi) <= 1
 all p: Placa | #(p.~placa) = 1 
-all x: Pessoa, c: Central | x.taxi in c.cadastrados 
+all p: Pessoa, c: Central | p.taxi in c.cadastrados 
+all P: Pessoa, T: Taxi | (T in P.taxi) implies (T.regiao = P.r) 
+all t: Taxi, p: Pessoa | (t in p.taxi) implies (t.status = Ocupado)
+all t: Taxi | (#(t.~taxi) = 0) implies (t.status = Livre)
 }
 pred show[]{
 }
