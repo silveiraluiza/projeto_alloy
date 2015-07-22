@@ -13,6 +13,9 @@ sig Placa{}
 abstract sig Status {}
 one sig Ocupado, Livre extends Status {}
 
+one sig Central{
+cadastrados: some Taxi
+}
 
 abstract sig Regiao {}
 one sig Norte, Sul, Leste, Oeste, Centro extends Regiao{}
@@ -23,8 +26,9 @@ taxi: one Taxi
 }
 
 fact{
-all t: Taxi | #(t.~taxi) = 1
+all t: Taxi | #(t.~taxi) <= 1
 all p: Placa | #(p.~placa) = 1 
+all x: Pessoa, c: Central | x.taxi in c.cadastrados 
 }
 pred show[]{
 }
