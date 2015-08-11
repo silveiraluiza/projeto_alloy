@@ -29,15 +29,18 @@ taxi: Taxi -> Time -- uma pessoa só pode pegar um taxi em um tempo t, definir i
 
 // Define os status dos taxistas
 pred init [t: Time]{
-	t = first => Taxi.status.t = Livre -- Um sempre tem status inicial disponível
-	t = first => no (Central.cadastrados).t  //a central inicia vazia 
+	 Taxi.status.t = Livre -- Um sempre tem status inicial disponível
+	no (Central.cadastrados).t  //a central inicia vazia 
 }
 
 // Todo taxista possui uma placa identificadora
 pred todoTaxistaComPlaca[p1: Placa]{
 	p1 in Taxi.placa
 }
-
+//taxi pode levar apenas um passageiro, ok? 
+pred TaxiUmaPessoa[T: Taxi, t: Time, P, P1: Pessoa]{
+(T in (P.taxi).t) implies (T !in (P1.taxi).t)
+}
 // Taxista possui apenas um status
 pred taxistaPossuiApenas1Status[T: Taxi, t: Time]{
 	#(T.status) . t = 1
@@ -73,12 +76,13 @@ fact traces{
 //	Todo taxista possui uma placa
 	all P: Placa | todoTaxistaComPlaca[P] -- ok // também não é necessário por causa do one, talvez pode ser implementado como teste?
 	all T: Taxi, P:Pessoa, t: Time | taxiocupado[T,t,P]
+	all T: Taxi, P:Pessoa, P1: Pessoa -P, t: Time | TaxiUmaPessoa[T,t,P,P1]
 	all p: Placa | #(p.~placa) = 1 
 	all p: Pessoa, c: Central | p.taxi in c.cadastrados 
 	all P: Pessoa, t: Time|  PessoaUmTaxi[P,t]
 
 	all T: Taxi, C: Central, t,t1: Time - first | 
-		 TaxiPertenceCentral[T,C,t] <=>  TaxiPertenceCentral[T,C,t1]  
+		 TaxiPertenceCentral[T,C,t] <=>  TaxiPertenceCentral[T,C,t1]  // se um taxi pertence a central em um dado momento ele pertencerá a ela em todos os momentos. tem que mudar na questão da validade
 
 
 --all P: Pessoa, T: Taxi | (T in P.taxi) implies (T.regiao = P.r) uma pessoa só pode pegar o taxi da sua mesma região 
@@ -86,6 +90,8 @@ fact traces{
 --all t: Taxi | (#(t.~taxi) = 0) implies (t.status = Livre) todo taxi sem pessoa está livre
 -- tive que deixar comentado pois tinha feito todas essas relações como binárias, mas tem que se usar os predicados e funções para torná-las ternárias
 }
+
+
 
 
 
