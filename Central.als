@@ -69,7 +69,10 @@ pred PessoaUmTaxi[P: Pessoa, t: Time]{
 pred TaxiPertenceCentral[T: Taxi,C: Central,t: Time]{
 	  (T !in (C.cadastrados).t) || ((T.registro).t = Valido)
 }
-
+// em algum ponto do tempo o registro do taxi se tornará inválido
+pred mudaValidade[T: Taxi, t0: Time, t1: Time]{
+	((T.registro).t0 = Valido) implies (((T.registro).t1 = Valido) or ((T.registro).t1 = Invalido))
+}
 fact traces{
 	init[first]
 // Taxista possui apenas um status um status (disponivel ou ocupado)
@@ -84,11 +87,13 @@ fact traces{
 	all p: Pessoa, c: Central | p.taxi in c.cadastrados 
 // pessoa só pode ter um taxi por time
 	all P: Pessoa, t: Time|  PessoaUmTaxi[P,t]
-// se um taxi pertence a central em um dado momento ele pertencerá a ela em todos os momentos. 
-// tem que mudar na questão da validade
+// taxi pertence a central?
 	all T: Taxi, C: Central, t: Time - first | 
 		 TaxiPertenceCentral[T,C,t]
-
+// mudança de validade
+	all pre: Time - first | let pos = pre.next |
+		 all T: Taxi |	mudaValidade[T,pre,pos]
+		
 	// assert?
 	all p: Placa | #(p.~placa) = 1 // botar como assert? o one cobre isso?
 	all P: Placa | todoTaxistaComPlaca[P] -- botar como assert
