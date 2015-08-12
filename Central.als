@@ -5,9 +5,11 @@ sig Time{} -- objetos que representam momentos no tempo
 sig Taxi{
 regiao: one Regiao,
 placa: one Placa,
-status: Status -> Time 
+status: Status -> Time, 
+registro: Reg -> Time
 }
-sig Valido in Taxi {}
+abstract sig Reg {}
+one sig Valido, Invalido extends Reg {}
 
 sig Placa{}
 abstract sig Status {}
@@ -44,7 +46,10 @@ pred TaxiUmaPessoa[T: Taxi, t: Time, P, P1: Pessoa]{
 // Taxista possui apenas um status
 pred taxistaPossuiApenas1Status[T: Taxi, t: Time]{
 	#(T.status) . t = 1
-	
+}
+// Taxista possui apenas um Registro por unidade tempo
+pred taxistaPossuiApenas1Reg[T: Taxi, t: Time]{
+	#(T.registro) . t = 1
 }
 // muda o status de taxi
 pred taxiocupado[T:Taxi, t:Time, P: Pessoa]{
@@ -58,21 +63,19 @@ pred AdcTaxiCentral[T1: Taxi, t,t': Time, C: Central]{
 }
 //uma pessoa não pode ocupar dois taxis ao mesmo tempo
 pred PessoaUmTaxi[P: Pessoa, t: Time]{
-# ((P.taxi).t) <= 1
+	# ((P.taxi).t) <= 1
 }
-
 // Verifica se taxi pertence a central
 pred TaxiPertenceCentral[T: Taxi,C: Central,t: Time]{
-	  T in (C.cadastrados).t
-}
-// ?????????? de onde isso veio ?????????
-pred RegiaoCompat[P: Pessoa, T: Taxi, t:Time]{
+	  (T !in (C.cadastrados).t) || ((T.registro).t = Valido)
 }
 
 fact traces{
 	init[first]
 // Taxista possui apenas um status um status (disponivel ou ocupado)
 	all T: Taxi, t: Time | taxistaPossuiApenas1Status[T,t]
+// Taxista possui apenas um status um registro (válido ou não)
+	all T: Taxi, t: Time | taxistaPossuiApenas1Reg[T,t]
 // se um taxi estiver ocupado por uma pessoa seu status muda
 	all T: Taxi, P:Pessoa, t: Time | taxiocupado[T,t,P]
 // Taxi só transporta um passageiro por vez
@@ -83,8 +86,8 @@ fact traces{
 	all P: Pessoa, t: Time|  PessoaUmTaxi[P,t]
 // se um taxi pertence a central em um dado momento ele pertencerá a ela em todos os momentos. 
 // tem que mudar na questão da validade
-	all T: Taxi, C: Central, t,t1: Time - first | 
-		 TaxiPertenceCentral[T,C,t] <=>  TaxiPertenceCentral[T,C,t1] 
+	all T: Taxi, C: Central, t: Time - first | 
+		 TaxiPertenceCentral[T,C,t]
 
 	// assert?
 	all p: Placa | #(p.~placa) = 1 // botar como assert? o one cobre isso?
