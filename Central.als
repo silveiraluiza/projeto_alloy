@@ -93,6 +93,33 @@ fact traces{
 }
 
 
+--teste
+assert testeTaxiPertenceCentral{
+	all T: Taxi, C: Central, t,t1: Time - first | 
+	T in (C.cadastrados).t <=>  T in (C.cadastrados).t1
+}
 
+assert testePessoaUmTaxi{
+	all P: Pessoa, t: Time|  # ((P.taxi).t) <= 1
+}
+
+assert testeTaxiOcupado {
+		all T: Taxi, P:Pessoa, t: Time | (T in (P.taxi).t) implies ((T.status).t = Ocupado) 
+}
+
+assert testeTaxiUmaPessoa{
+	all T: Taxi, P:Pessoa, P1: Pessoa -P, t: Time | (T in (P.taxi).t) implies (T !in (P1.taxi).t)
+}
+
+assert testeTaxiPessoaEmCentral{
+	all p: Pessoa, c: Central | p.taxi in c.cadastrados 
+}
+
+
+check testeTaxiPertenceCentral for 6
+check testePessoaUmTaxi for 6
+check testeTaxiOcupado for 6
+check testeTaxiUmaPessoa for 6
+check testeTaxiPessoaEmCentral for 6
 
 run init for 6
