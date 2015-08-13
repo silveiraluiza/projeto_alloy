@@ -1,33 +1,35 @@
 open util/ordering[Time] -- ordenação dos tempos
 
+------------------------------					-- Assinaturas --           -------------------------------------------------
+
 sig Time{} -- objetos que representam momentos no tempo
 
 sig Taxi{
-regiao: one Regiao,
-placa: one Placa,
-status: Status -> Time, 
-registro: Reg -> Time
+	regiao: one Regiao,
+	placa: one Placa,
+	status: Status -> Time, 
+	registro: Reg -> Time
 }
 abstract sig Reg {}
-one sig Valido, Invalido extends Reg {}
+	one sig Valido, Invalido extends Reg {}
 
 sig Placa{}
-abstract sig Status {}
-one sig Ocupado, Livre extends Status {}
+	abstract sig Status {}
+	one sig Ocupado, Livre extends Status {}
 
 one sig Central{
-cadastrados: Taxi -> Time 
+	cadastrados: Taxi -> Time 
 }
 
 abstract sig Regiao {}
-one sig Norte, Sul, Leste, Oeste, Centro extends Regiao{}
+	one sig Norte, Sul, Leste, Oeste, Centro extends Regiao{}
 
 sig Pessoa{
-r: one Regiao,
-taxi: Taxi -> Time 
+	r: one Regiao,
+	taxi: Taxi -> Time 
 }
 
-//------------------
+//------------------ Predicados com manipulção de tempo -------------------------
 
 // Define os status dos taxistas e da central
 pred init [t: Time]{
@@ -35,10 +37,6 @@ pred init [t: Time]{
 	no (Central.cadastrados).t   //a central inicia vazia 
 }
 
-// Todo taxista possui uma placa identificadora
-pred todoTaxistaComPlaca[p1: Placa]{
-	p1 in Taxi.placa
-}
 //taxi pode levar apenas um passageiro, ok? 
 pred TaxiUmaPessoa[T: Taxi, t: Time, P, P1: Pessoa]{
 (T in (P.taxi).t) implies (T !in (P1.taxi).t)
@@ -73,6 +71,14 @@ pred TaxiPertenceCentral[T: Taxi,C: Central,t: Time]{
 pred mudaValidade[T: Taxi, t0: Time, t1: Time]{
 	((T.registro).t0 = Valido) implies (((T.registro).t1 = Valido) or ((T.registro).t1 = Invalido))
 }
+
+// Todo taxista possui uma placa identificadora
+pred todoTaxistaComPlaca[p1: Placa]{
+	p1 in Taxi.placa
+}
+
+--------------------------------- Facts ----------------------------------------
+
 fact traces{
 	init[first]
 // Taxista possui apenas um status um status (disponivel ou ocupado)
@@ -94,14 +100,13 @@ fact traces{
 	all pre: Time - first | let pos = pre.next |
 		 all T: Taxi |	mudaValidade[T,pre,pos]
 		
-	// assert?
-	all p: Placa | #(p.~placa) = 1 // botar como assert? o one cobre isso?
-	all P: Placa | todoTaxistaComPlaca[P] -- botar como assert
-	all T: Taxi, T1: Taxi - T | #(T.placa & T1.placa) = 0 // botar como assert -> Iza
+// toda placa possui um taxi
+	all p: Placa | #(p.~placa) = 1 // botar como assert? o one cobre isso? - Acho que one cobre, mas por garantia.
 }
 
 
---teste
+-------------------------------------------- Asserts -------------------------------------------------------------
+//altera esse teste
 assert testeTaxiPertenceCentral{
 	all T: Taxi, C: Central, t,t1: Time - first | 
 	T in (C.cadastrados).t <=>  T in (C.cadastrados).t1
@@ -123,11 +128,31 @@ assert testeTaxiPessoaEmCentral{
 	all p: Pessoa, c: Central | p.taxi in c.cadastrados 
 }
 
+assert testeTodaPlacaDiferente{
+	all T: Taxi, T1: Taxi - T | #(T.placa & T1.placa) = 0
+}
 
+assert testeTodoTaxistaComPlaca{
+	all p1: Placa | p1 in Taxi.placa
+
+}//Verificar se Taxi cadastrado pode ser inválido (dica, não pode)
+assert testeTaxiDaCentralSempreValidos{ 
+	all c: Central,T: Invalido, t: Time | #((((c.cadastrados).t).registro).t & T)= 0
+}
+//Verificar se todo taxi que a pessoa pega é válido (dica, deve)
+assert testeTaxiPessoaSempreValido{ 
+	all p: Pessoa, v: Valido, t: Time | ((((p.taxi).t).registro).t in v)
+}
+
+----------------------------- Run e Checks -----------------------------------------
+
+check testeTaxiDaCentralSempreValidos for 6
+check testeTaxiPessoaSempreValido for 6
 check testeTaxiPertenceCentral for 6
 check testePessoaUmTaxi for 6
 check testeTaxiOcupado for 6
 check testeTaxiUmaPessoa for 6
 check testeTaxiPessoaEmCentral for 6
-
+check  testeTodaPlacaDiferente for 6 -- 
+check testeTodoTaxistaComPlaca for 6 --
 run init for 6
