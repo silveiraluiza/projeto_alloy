@@ -87,17 +87,23 @@ pred taxiEstaOcupado[T: Taxi,t: Time]{
 	(T.status).t = Ocupado
 }
 
+pred taxiValido[T: Taxi, t: Time]{
+	(T.registro).t = Valido
+}
 
+pred taxiInvalido[T: Taxi, t: Time]{
+	(T.registro).t = Valido
+}
 /////////////// PESSOA /////////////////////////
 // Pessoa sai do Taxi (função)
 pred pessoaSaiTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
-	T1 in (P.taxi).t
-	 ((P.taxi).t' = (P.taxi).t - T1) || ((P.taxi).t' = (P.taxi).t)
+	(T1 in (P.taxi).t) =>
+	 (((P.taxi).t' = (P.taxi).t - T1) || ((P.taxi).t' = (P.taxi).t))
 }
 // Pessoa chama um taxi (Função)
 pred pessoaChamaTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
-	(T1 !in (P.taxi).t) && ((T1.regiao = P.r) && taxiEstaLivre[T1,t])  
-	((P.taxi).t' = ((P.taxi).t + T1)  ) || ((P.taxi).t' = (P.taxi).t) 
+	(T1 !in (P.taxi).t) && ((T1.regiao = P.r) && taxiEstaLivre[T1,t]) implies
+	((P.taxi).t' = ((P.taxi).t + T1)  ) 
 	 
 }
 
@@ -107,8 +113,7 @@ pred PessoaUmTaxi[P: Pessoa, t: Time]{
 }	
 // pessoa chama um taxi com região diferente da sua (função)
 pred pessoaChamaDifTaxi[T: Taxi, T1: Taxi , t,t': Time, P: Pessoa]{
-	taxiEstaOcupado[T,t]
-	taxiEstaLivre[T1,t]
+	taxiEstaOcupado[T,t] && taxiEstaLivre[T1,t]
 	taxisRegioesDiferentes[T,T1]
 	(T.regiao = P.r) && (T1.regiao != P.r)
 	(P.taxi).t' = ((P.taxi).t + T1)
@@ -161,7 +166,7 @@ fact traces{
 		 some T: Taxi |	mudaValidade[T,pre,pos]
 // Pessoa chama Taxi
 	some pre: Time - first| let pos = pre.next |
-		some T: Taxi | all P: Pessoa |
+		all T: Taxi | all P: Pessoa |
 				pessoaChamaTaxi[T,pre,pos,P]
 // Pessoa sai do Taxi
 	some pre: Time - first| let pos = pre.next |
