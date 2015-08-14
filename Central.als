@@ -54,7 +54,10 @@ pred taxistaPossuiApenas1Reg[T: Taxi, t: Time]{
 pred taxiocupado[T:Taxi, t:Time, P: Pessoa]{
 	(T in (P.taxi).t) implies ((T.status).t = Ocupado) 
 }
-
+// muda o status de taxi para livre
+pred taxiLivre[T:Taxi, t:Time, P: Pessoa]{
+	(T !in (P.taxi).t) implies ((T.status).t = Livre)
+}
 // Pessoa chama um taxi (Função)
 pred pessoaChamaTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
 	(T1 !in (P.taxi).t) && (T1.regiao = P.r)
@@ -92,12 +95,14 @@ pred todoTaxistaComPlaca[p1: Placa]{
 
 fact traces{
 	init[first]
-// Taxista possui apenas um status um status (disponivel ou ocupado)
+// Taxista possui apenas  um status (disponivel ou ocupado)
 	all T: Taxi, t: Time | taxistaPossuiApenas1Status[T,t]
 // Taxista possui apenas um status um registro (válido ou não)
 	all T: Taxi, t: Time | taxistaPossuiApenas1Reg[T,t]
 // se um taxi estiver ocupado por uma pessoa seu status muda
 	all T: Taxi, P:Pessoa, t: Time | taxiocupado[T,t,P]
+// se um taxi não estiver com passageiro ele está livre
+	all T: Taxi, t:Time | some P: Pessoa | taxiLivre[T,t,P]
 // Taxi só transporta um passageiro por vez
 	all T: Taxi, P:Pessoa, P1: Pessoa -P, t: Time | TaxiUmaPessoa[T,t,P,P1]
 // todo taxi pego por uma pessoa precisa estar cadastrado
@@ -111,11 +116,11 @@ fact traces{
 	all pre: Time - first | let pos = pre.next |
 		 all T: Taxi |	mudaValidade[T,pre,pos]
 // Pessoa chama Taxi
-	some pre: Time - first | let pos = pre.next |
+	some pre: Time - first| let pos = pre.next |
 		all T: Taxi, P: Pessoa |
 				pessoaChamaTaxi[T,pre,pos,P]
 // Pessoa sai do Taxi
-	some pre: Time - first | let pos = pre.next |
+	some pre: Time - first| let pos = pre.next |
 		all T: Taxi, P: Pessoa |
 				pessoaSaiTaxi[T,pre,pos,P]
 // toda placa possui um taxi
