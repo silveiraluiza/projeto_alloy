@@ -35,9 +35,10 @@ sig Pessoa{
 // Define os status dos taxistas e da central
 pred init [t: Time]{
 	 Taxi.status.t = Livre  //Um sempre tem status inicial disponível
-	
+	no (Central.cadastrados).t   //a central inicia vazia 
 }
 
+/////////          TAXI          /////////	
 //taxi pode levar apenas um passageiro 
 pred TaxiUmaPessoa[T: Taxi, t: Time, P, P1: Pessoa]{
 (T in (P.taxi).t) implies (T !in (P1.taxi).t)
@@ -58,30 +59,6 @@ pred taxiOcupado[T:Taxi, t:Time, P: Pessoa]{
 pred taxiLivre[T:Taxi, t:Time, P: Pessoa]{
 	(T !in (P.taxi).t) implies ((T.status).t = Livre)
 }
-// Pessoa chama um taxi (Função)
-pred pessoaChamaTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
-	(T1 !in (P.taxi).t) && ((T1.regiao = P.r) && taxiEstaLivre[T1,t])  
-	(P.taxi).t' = ((P.taxi).t + T1)   
-	 
-}
-// Pessoa sai do Taxi
-pred pessoaSaiTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
-	T1 in (P.taxi).t
-	 ((P.taxi).t' = (P.taxi).t - T1)
-}
-// adiciona taxi  a central, usaremos?
-pred AdcTaxiCentral[T1: Taxi, t,t': Time, C: Central]{
-	T1 !in (C.cadastrados).t
-	 ((C.cadastrados).t' = (C.cadastrados).t + T1)
-}
-//uma pessoa não pode ocupar dois taxis ao mesmo tempo
-pred PessoaUmTaxi[P: Pessoa, t: Time]{
-	# ((P.taxi).t) < 2
-}
-// Verifica se taxi pertence a central
-pred TaxiPertenceCentral[T: Taxi,C: Central,t: Time]{
-	  (T !in (C.cadastrados).t) || ((T.registro).t = Valido)
-}
 // em algum ponto do tempo o registro do taxi se tornará inválido
 pred mudaValidade[T: Taxi, t0: Time, t1: Time]{
 	((T.registro).t0 = Valido) implies (((T.registro).t1 = Valido) or ((T.registro).t1 = Invalido))
@@ -91,7 +68,6 @@ pred mudaValidade[T: Taxi, t0: Time, t1: Time]{
 pred todoTaxistaComPlaca[p1: Placa]{
 	p1 in Taxi.placa
 }
-
 // Dois taxis são de regiões distintas
 pred taxisRegioesDiferentes[t1: Taxi, t2: Taxi - t1]{ -------------------------- AQUI
 	 (t1.regiao != t2.regiao)
@@ -102,18 +78,34 @@ pred taxiDeterminadaRegiao[t: Taxi, r1: Regiao]{	-------------------------------
 	t.regiao = r1
 }
 
-// Todos os taxis que atendem a uma regiao r1, estao com status ocupado
-pred regiaoOcupada[t1:Taxi, r1: Regiao, t: Time]{ ----------------------------------AQUI
-	taxiDeterminadaRegiao[t1, r1]
-	taxiEstaOcupado[t1,t]
-}
+//verifica se o taxi está livre
 pred taxiEstaLivre[T:Taxi, t:Time]{
 	(T.status).t = Livre
 }
+//verifica se o taxi está ocupado
 pred taxiEstaOcupado[T: Taxi,t: Time]{
 	(T.status).t = Ocupado
 }
 
+
+/////////////// PESSOA /////////////////////////
+// Pessoa sai do Taxi (função)
+pred pessoaSaiTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
+	T1 in (P.taxi).t
+	 ((P.taxi).t' = (P.taxi).t - T1) || ((P.taxi).t' = (P.taxi).t)
+}
+// Pessoa chama um taxi (Função)
+pred pessoaChamaTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
+	(T1 !in (P.taxi).t) && ((T1.regiao = P.r) && taxiEstaLivre[T1,t])  
+	((P.taxi).t' = ((P.taxi).t + T1)  ) || ((P.taxi).t' = (P.taxi).t) 
+	 
+}
+
+//uma pessoa não pode ocupar dois taxis ao mesmo tempo
+pred PessoaUmTaxi[P: Pessoa, t: Time]{
+	# ((P.taxi).t) < 2
+}	
+// pessoa chama um taxi com região diferente da sua (função)
 pred pessoaChamaDifTaxi[T: Taxi, T1: Taxi , t,t': Time, P: Pessoa]{
 	taxiEstaOcupado[T,t]
 	taxiEstaLivre[T1,t]
@@ -123,6 +115,26 @@ pred pessoaChamaDifTaxi[T: Taxi, T1: Taxi , t,t': Time, P: Pessoa]{
 	 	 
 }
 
+///////////////////////////// CENTRAL /////////////////////////
+// adiciona taxi  a central, usaremos? (função)
+pred AdcTaxiCentral[T1: Taxi, t,t': Time, C: Central]{
+	T1 !in (C.cadastrados).t
+	 ((C.cadastrados).t' = (C.cadastrados).t + T1)
+}
+// Verifica se taxi pertence a central
+pred TaxiPertenceCentral[T: Taxi,C: Central,t: Time]{
+	  (T !in (C.cadastrados).t) || ((T.registro).t = Valido)
+}
+
+/////////////////// REGIÃO ///////////////////////////	
+// Todos os taxis que atendem a uma regiao r1, estao com status ocupado
+pred regiaoOcupada[t1:Taxi, r1: Regiao, t: Time]{ ----------------------------------AQUI
+	taxiDeterminadaRegiao[t1, r1]
+	taxiEstaOcupado[t1,t]
+}
+pred regiaoUmTaxi[r: Regiao]{
+#(r.~regiao) > 0
+}
 --------------------------------- Facts ----------------------------------------
 
 fact traces{
@@ -132,7 +144,7 @@ fact traces{
 // Taxista possui apenas um status um registro (válido ou não)
 	all T: Taxi, t: Time | taxistaPossuiApenas1Reg[T,t]
 // se um taxi estiver ocupado por uma pessoa seu status muda
-	all T: Taxi, t: Time | some P: Pessoa | taxiOcupado[T,t,P]
+	all T: Taxi, t: Time, P: Pessoa | taxiOcupado[T,t,P]
 // se um taxi não estiver com passageiro ele está livre
 	all T: Taxi, t:Time | some P: Pessoa | taxiLivre[T,t,P]
 // Taxi só transporta um passageiro por vez
@@ -142,13 +154,14 @@ fact traces{
 // pessoa só pode ter um taxi por time
 	all P: Pessoa, t: Time|  PessoaUmTaxi[P,t]
 // taxi pertence a central?
-	all T: Taxi, C: Central| all t: Time - first | 
+	all T: Taxi, C: Central, t: Time - first | 
 		 TaxiPertenceCentral[T,C,t]
-	
-
+// mudança de validade
+	all pre: Time - first | let pos = pre.next |
+		 some T: Taxi |	mudaValidade[T,pre,pos]
 // Pessoa chama Taxi
 	some pre: Time - first| let pos = pre.next |
-		all P: Pessoa| some T: Taxi |
+		some T: Taxi | all P: Pessoa |
 				pessoaChamaTaxi[T,pre,pos,P]
 // Pessoa sai do Taxi
 	some pre: Time - first| let pos = pre.next |
@@ -157,12 +170,8 @@ fact traces{
 // toda placa possui um taxi
 	all p: Placa | #(p.~placa) = 1 
 
-// mudança de validade
-	all pre: Time - first | let pos = pre.next |
-		 some T: Taxi |	mudaValidade[T,pre,pos]
-
+	all r: Regiao | regiaoUmTaxi[r]
 }
-
 
 
 -------------------------------------------- Asserts -------------------------------------------------------------
@@ -200,7 +209,7 @@ assert testeTaxiDaCentralSempreValidos{
 }
 //Verificar se todo taxi que a pessoa pega é válido (dica, deve)
 assert testeTaxiPessoaSempreValido{ 
-	all p: Pessoa, t: Time | ((((p.taxi).t).registro).t in Valido)
+	all p: Pessoa, v: Valido, t: Time | ((((p.taxi).t).registro).t in v)
 }
 
 
