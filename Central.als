@@ -35,7 +35,7 @@ sig Pessoa{
 // Define os status dos taxistas e da central
 pred init [t: Time]{
 	 Taxi.status.t = Livre  //Um sempre tem status inicial disponível
-	no (Central.cadastrados).t   //a central inicia vazia 
+	
 }
 
 //taxi pode levar apenas um passageiro 
@@ -132,7 +132,7 @@ fact traces{
 // Taxista possui apenas um status um registro (válido ou não)
 	all T: Taxi, t: Time | taxistaPossuiApenas1Reg[T,t]
 // se um taxi estiver ocupado por uma pessoa seu status muda
-	all T: Taxi, P:Pessoa, t: Time | taxiOcupado[T,t,P]
+	all T: Taxi, t: Time | some P: Pessoa | taxiOcupado[T,t,P]
 // se um taxi não estiver com passageiro ele está livre
 	all T: Taxi, t:Time | some P: Pessoa | taxiLivre[T,t,P]
 // Taxi só transporta um passageiro por vez
@@ -142,28 +142,27 @@ fact traces{
 // pessoa só pode ter um taxi por time
 	all P: Pessoa, t: Time|  PessoaUmTaxi[P,t]
 // taxi pertence a central?
-	all T: Taxi, C: Central, t: Time - first | 
+	all T: Taxi, C: Central| all t: Time - first | 
 		 TaxiPertenceCentral[T,C,t]
-// mudança de validade
-	all pre: Time - first | let pos = pre.next |
-		 all T: Taxi |	mudaValidade[T,pre,pos]
+	
+
 // Pessoa chama Taxi
 	some pre: Time - first| let pos = pre.next |
-		all T: Taxi, P: Pessoa |
+		all P: Pessoa| some T: Taxi |
 				pessoaChamaTaxi[T,pre,pos,P]
 // Pessoa sai do Taxi
 	some pre: Time - first| let pos = pre.next |
-		all T: Taxi, P: Pessoa |
+		some T: Taxi, P: Pessoa |
 				pessoaSaiTaxi[T,pre,pos,P]
 // toda placa possui um taxi
 	all p: Placa | #(p.~placa) = 1 
 
-// ???????????????????????????????????????????????????????????? why ?????????????
-	some pre: Time - first| let pos = pre.next |
-		all T: Taxi, P: Pessoa | some T1: Taxi - T |
-			pessoaChamaDifTaxi[T,T1,pre,pos,P]
+// mudança de validade
+	all pre: Time - first | let pos = pre.next |
+		 some T: Taxi |	mudaValidade[T,pre,pos]
 
 }
+
 
 
 -------------------------------------------- Asserts -------------------------------------------------------------
@@ -201,7 +200,7 @@ assert testeTaxiDaCentralSempreValidos{
 }
 //Verificar se todo taxi que a pessoa pega é válido (dica, deve)
 assert testeTaxiPessoaSempreValido{ 
-	all p: Pessoa, v: Valido, t: Time | ((((p.taxi).t).registro).t in v)
+	all p: Pessoa, t: Time | ((((p.taxi).t).registro).t in Valido)
 }
 
 
