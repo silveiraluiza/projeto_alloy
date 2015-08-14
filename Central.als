@@ -14,7 +14,8 @@ abstract sig Reg {}
 	one sig Valido, Invalido extends Reg {}
 
 sig Placa{}
-	abstract sig Status {}
+
+abstract sig Status {}
 	one sig Ocupado, Livre extends Status {}
 
 one sig Central{
@@ -37,7 +38,7 @@ pred init [t: Time]{
 	no (Central.cadastrados).t   //a central inicia vazia 
 }
 
-//taxi pode levar apenas um passageiro, ok? 
+//taxi pode levar apenas um passageiro 
 pred TaxiUmaPessoa[T: Taxi, t: Time, P, P1: Pessoa]{
 (T in (P.taxi).t) implies (T !in (P1.taxi).t)
 }
@@ -54,14 +55,24 @@ pred taxiocupado[T:Taxi, t:Time, P: Pessoa]{
 	(T in (P.taxi).t) implies ((T.status).t = Ocupado) 
 }
 
-//adiciona taxi a central, imitação do código do banco para teste, deu certo
+// Pessoa chama um taxi (Função)
+pred pessoaChamaTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
+	(T1 !in (P.taxi).t) && (T1.regiao = P.r)
+	 (P.taxi).t' = ((P.taxi).t + T1)
+}
+// Pessoa sai do Taxi
+pred pessoaSaiTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
+	T1 in (P.taxi).t
+	 ((P.taxi).t' = (P.taxi).t - T1)
+}
+// adiciona taxi  a central, usaremos?
 pred AdcTaxiCentral[T1: Taxi, t,t': Time, C: Central]{
 	T1 !in (C.cadastrados).t
 	 ((C.cadastrados).t' = (C.cadastrados).t + T1)
 }
 //uma pessoa não pode ocupar dois taxis ao mesmo tempo
 pred PessoaUmTaxi[P: Pessoa, t: Time]{
-	# ((P.taxi).t) <= 1
+	# ((P.taxi).t) < 2
 }
 // Verifica se taxi pertence a central
 pred TaxiPertenceCentral[T: Taxi,C: Central,t: Time]{
@@ -99,19 +110,24 @@ fact traces{
 // mudança de validade
 	all pre: Time - first | let pos = pre.next |
 		 all T: Taxi |	mudaValidade[T,pre,pos]
-		
+// Pessoa chama Taxi
+	some pre: Time - first | let pos = pre.next |
+		all T: Taxi, P: Pessoa |
+				pessoaChamaTaxi[T,pre,pos,P]
+// Pessoa sai do Taxi
+	some pre: Time - first | let pos = pre.next |
+		all T: Taxi, P: Pessoa |
+				pessoaSaiTaxi[T,pre,pos,P]
 // toda placa possui um taxi
-	all p: Placa | #(p.~placa) = 1 // botar como assert? o one cobre isso? - Acho que one cobre, mas por garantia.
+	all p: Placa | #(p.~placa) = 1 
 }
 
 
 -------------------------------------------- Asserts -------------------------------------------------------------
-//altera esse teste
-assert testeTaxiPertenceCentral{
-	all T: Taxi, C: Central, t,t1: Time - first | 
-	T in (C.cadastrados).t <=>  T in (C.cadastrados).t1
-}
 
+assert testeTaxiPertenceCentral{
+	all T: Taxi, C: Central, t: Time - first | 	(T !in (C.cadastrados).t) || ((T.registro).t = Valido)
+}
 assert testePessoaUmTaxi{
 	all P: Pessoa, t: Time|  # ((P.taxi).t) <= 1
 }
@@ -135,7 +151,8 @@ assert testeTodaPlacaDiferente{
 assert testeTodoTaxistaComPlaca{
 	all p1: Placa | p1 in Taxi.placa
 
-}//Verificar se Taxi cadastrado pode ser inválido (dica, não pode)
+}
+//Verificar se Taxi cadastrado pode ser inválido (dica, não pode)
 assert testeTaxiDaCentralSempreValidos{ 
 	all c: Central,T: Invalido, t: Time | #((((c.cadastrados).t).registro).t & T)= 0
 }
