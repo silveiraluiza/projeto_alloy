@@ -111,15 +111,15 @@ pred pessoaChamaTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
 pred PessoaUmTaxi[P: Pessoa, t: Time]{
 	# ((P.taxi).t) < 2
 }	
-// pessoa chama um taxi com região diferente da sua (função)
+
+// pessoa chama um taxi com região diferente da sua (função) - Mudou essa!
 pred pessoaChamaDifTaxi[T: Taxi, T1: Taxi , t,t': Time, P: Pessoa]{
 	taxiEstaOcupado[T,t] && taxiEstaLivre[T1,t]
 	taxisRegioesDiferentes[T,T1]
-	(T.regiao = P.r) && (T1.regiao != P.r)
+	(T.regiao = P.r) && (T1.regiao != P.r) && ((T.status).t' = Ocupado || (T.registro).t' = Invalido) 
 	(P.taxi).t' = ((P.taxi).t + T1)
 	 	 
 }
-
 ///////////////////////////// CENTRAL /////////////////////////
 // adiciona taxi  a central, usaremos? (função)
 pred AdcTaxiCentral[T1: Taxi, t,t': Time, C: Central]{
@@ -176,9 +176,12 @@ fact traces{
 	all p: Placa | #(p.~placa) = 1 
 
 	all r: Regiao | regiaoUmTaxi[r]
+
+some pre: Time| let pos = pre.next |
+		all T: Taxi, P:Pessoa |some T1: Taxi - T | (T.regiao = P.r) and ((	taxiEstaOcupado[T,pre]) 
+				or ((T.registro).pre= Invalido)) and (taxiEstaLivre[T1, pre]) => pessoaChamaDifTaxi[T, T1, pre, pos, P]     
+
 }
-
-
 -------------------------------------------- Asserts -------------------------------------------------------------
 
 assert testeTaxiPertenceCentral{
