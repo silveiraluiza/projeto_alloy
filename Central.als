@@ -102,8 +102,9 @@ pred pessoaSaiTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
 }
 // Pessoa chama um taxi (Função)
 pred pessoaChamaTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
-	(T1 !in (P.taxi).t) && ((T1.regiao = P.r) && taxiEstaLivre[T1,t]) implies
-	((P.taxi).t' = ((P.taxi).t + T1)  ) 
+	((P.taxi).t' = ((P.taxi).t + T1)  ) implies 
+	(T1 !in (P.taxi).t) && ((T1.regiao = P.r) && taxiEstaLivre[T1,t]) 
+	
 	 
 }
 
