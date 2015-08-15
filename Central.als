@@ -27,7 +27,8 @@ abstract sig Regiao {}
 
 sig Pessoa{
 	r: one Regiao,
-	taxi: Taxi -> Time 
+	taxi: Taxi -> Time, 
+	placapreferida: Placa
 }
 
 //------------------ Predicados com manipulção de tempo -------------------------
@@ -79,20 +80,20 @@ pred taxiDeterminadaRegiao[t: Taxi, r1: Regiao]{	-------------------------------
 }
 
 //verifica se o taxi está livre
-pred taxiEstaLivre[T:Taxi, t:Time]{
-	(T.status).t = Livre
+pred taxiEstaLivre[T:Taxi, t:Time, P:Pessoa]{
+	T !in (P.taxi).t
 }
 //verifica se o taxi está ocupado
-pred taxiEstaOcupado[T: Taxi,t: Time]{
-	(T.status).t = Ocupado
+pred taxiEstaOcupado[T: Taxi,t: Time, P: Pessoa]{
+	T in (P.taxi).t
 }
 
 pred taxiValido[T: Taxi, t: Time]{
-	(T.registro).t = Valido
+	T in (Central.cadastrados).t
 }
 
 pred taxiInvalido[T: Taxi, t: Time]{
-	(T.registro).t = Valido
+	T !in (Central.cadastrados).t
 }
 /////////////// PESSOA /////////////////////////
 // Pessoa sai do Taxi (função)
@@ -101,13 +102,17 @@ pred pessoaSaiTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
 	 (((P.taxi).t' = (P.taxi).t - T1) || ((P.taxi).t' = (P.taxi).t))
 }
 // Pessoa chama um taxi (Função)
-pred pessoaChamaTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
-	((P.taxi).t' = ((P.taxi).t + T1)  ) implies 
-	(T1 !in (P.taxi).t) && ((T1.regiao = P.r) && taxiEstaLivre[T1,t]) 
+pred pessoaChamaTaxi[T1: Taxi, t,t': Time, P: Pessoa]{ 
+	((P.taxi).t' = ((P.taxi).t + T1)  ) implies (T1 !in (P.taxi).t) && ((T1.regiao = P.r) )	
 	
-	 
 }
-
+//Pessoa chama um taxi pela placa (função)
+pred pessoaChamaTaxiPlaca[T1: Taxi, t,t': Time, P: Pessoa]{ 
+	((P.taxi).t' = ((P.taxi).t + T1)  ) implies (T1 !in (P.taxi).t) && ((T1.regiao = P.r) && (P.placapreferida = T1.placa) )	
+}
+pred pessoaUmaPlaca[P:Pessoa]{
+	#(P.placapreferida)  < 2
+}
 //uma pessoa não pode ocupar dois taxis ao mesmo tempo
 pred PessoaUmTaxi[P: Pessoa, t: Time]{
 	# ((P.taxi).t) < 2
@@ -115,7 +120,7 @@ pred PessoaUmTaxi[P: Pessoa, t: Time]{
 
 // pessoa chama um taxi com região diferente da sua (função) - Mudou essa!
 pred pessoaChamaDifTaxi[T: Taxi, T1: Taxi , t,t': Time, P: Pessoa]{
-	taxiEstaOcupado[T,t] && taxiEstaLivre[T1,t]
+	taxiEstaOcupado[T,t,P] && taxiEstaLivre[T1,t,P]
 	taxisRegioesDiferentes[T,T1]
 	(T.regiao = P.r) && (T1.regiao != P.r) && ((T.status).t' = Ocupado || (T.registro).t' = Invalido) 
 	(P.taxi).t' = ((P.taxi).t + T1)
@@ -134,9 +139,9 @@ pred TaxiPertenceCentral[T: Taxi,C: Central,t: Time]{
 
 /////////////////// REGIÃO ///////////////////////////	
 // Todos os taxis que atendem a uma regiao r1, estao com status ocupado
-pred regiaoOcupada[t1:Taxi, r1: Regiao, t: Time]{ ----------------------------------AQUI
+pred regiaoOcupada[t1:Taxi, r1: Regiao, t: Time, P: Pessoa]{ ----------------------------------AQUI
 	taxiDeterminadaRegiao[t1, r1]
-	taxiEstaOcupado[t1,t]
+	taxiEstaOcupado[t1,t,P]
 }
 pred regiaoUmTaxi[r: Regiao]{
 #(r.~regiao) > 0
@@ -169,18 +174,19 @@ fact traces{
 	some pre: Time - first| let pos = pre.next |
 		all T: Taxi | all P: Pessoa |
 				pessoaChamaTaxi[T,pre,pos,P]
+//chama taxi de novo
+	some pre: Time - first| let pos = pre.next |
+		some T: Taxi | all P: Pessoa |
+				((P.r = T.regiao) && ( taxiEstaLivre[T,pre,P]) ) => (P.taxi.pos = (P.taxi.pre + T))
 // Pessoa sai do Taxi
 	some pre: Time - first| let pos = pre.next |
 		some T: Taxi, P: Pessoa |
 				pessoaSaiTaxi[T,pre,pos,P]
 // toda placa possui um taxi
 	all p: Placa | #(p.~placa) = 1 
-
+//toda região tem ao menos um taxi
 	all r: Regiao | regiaoUmTaxi[r]
 
-some pre: Time| let pos = pre.next |
-		all T: Taxi, P:Pessoa |some T1: Taxi - T | (T.regiao = P.r) and ((	taxiEstaOcupado[T,pre]) 
-				or ((T.registro).pre= Invalido)) and (taxiEstaLivre[T1, pre]) => pessoaChamaDifTaxi[T, T1, pre, pos, P]     
 
 }
 -------------------------------------------- Asserts -------------------------------------------------------------
