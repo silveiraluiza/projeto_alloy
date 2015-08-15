@@ -107,7 +107,7 @@ pred pessoaChamaTaxi[T1: Taxi, t,t': Time, P: Pessoa]{
 	
 }
 //Pessoa chama um taxi pela placa (função)
-pred pessoaChamaTaxiPlaca[T1: Taxi, t,t': Time, P: Pessoa]{ 
+pred pessoaChamaTaxiPelaPlaca[T1: Taxi, t,t': Time, P: Pessoa]{ 
 	((P.taxi).t' = ((P.taxi).t + T1)  ) implies (T1 !in (P.taxi).t) && ((T1.regiao = P.r) && (P.placapreferida = T1.placa) )	
 }
 pred pessoaUmaPlaca[P:Pessoa]{
@@ -174,6 +174,12 @@ fact traces{
 	some pre: Time - first| let pos = pre.next |
 		all T: Taxi | all P: Pessoa |
 				pessoaChamaTaxi[T,pre,pos,P]
+
+// Pessoa chama Taxi
+	some pre: Time - first| let pos = pre.next |
+		all T: Taxi | all P: Pessoa |
+				pessoaChamaTaxiPelaPlaca[T,pre,pos,P]
+
 //chama taxi de novo
 	some pre: Time - first| let pos = pre.next |
 		some T: Taxi | all P: Pessoa |
@@ -190,6 +196,11 @@ fact traces{
 
 }
 -------------------------------------------- Asserts -------------------------------------------------------------
+
+assert testeChamaTaxiPelaPlaca{
+	some t: Time - first| let t' = t.next |
+		all T1: Taxi | all P: Pessoa | ((P.taxi).t' = ((P.taxi).t + T1)  ) implies (T1 !in (P.taxi).t) && ((T1.regiao = P.r) && (P.placapreferida = T1.placa) )	
+}
 
 assert testeTaxiPertenceCentral{
 	all T: Taxi, C: Central, t: Time - first | 	(T !in (C.cadastrados).t) || ((T.registro).t = Valido)
@@ -227,12 +238,9 @@ assert testeTaxiPessoaSempreValido{
 	all p: Pessoa, v: Valido, t: Time | ((((p.taxi).t).registro).t in v)
 }
 
-
-
-
-
 ----------------------------- Run e Checks -----------------------------------------
 
+check testeChamaTaxiPelaPlaca for 6
 check testeTaxiDaCentralSempreValidos for 6
 check testeTaxiPessoaSempreValido for 6
 check testeTaxiPertenceCentral for 6
